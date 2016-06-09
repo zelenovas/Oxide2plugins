@@ -5,7 +5,7 @@ Available commands
 
 **/alertareas help** - show available command.  
 **/alertareas list** - show all areas with alert.  
-**/alertareas add <AreaName> [true]** - add new area (with optional "true" alert text will be shown constantly).  
+**/alertareas add \<AreaName\> [true]** - add new area (with optional "true" alert text will be shown constantly).  
 **/alertareas remove** <AreaName> - remove area (case insensitive).  
 **/alertareas edit** <AreaName> - edit mode where you can set alert text, corners coordinates and 'constant' attribute.  
 
