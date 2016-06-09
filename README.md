@@ -1,4 +1,4 @@
-Plugin allow admins to create rectangle areas (by coordinates of diagonally opposite corners) with alert (notification) messages.
+Plugin for Hurtworld, allow admins to create rectangle areas (by coordinates of diagonally opposite corners) with alert (notification) messages.
 
 Available commands
 -------------------
