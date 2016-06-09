@@ -4,10 +4,11 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("AlertAreas", "ALEX_and_ER", "0.0.8")]
+    [Info("AlertAreas", "ALEX_and_ER", "0.1.0")]
     class AlertAreas : HurtworldPlugin
     {
 		static string msgPrefixColor = "orange";
@@ -96,10 +97,7 @@ namespace Oxide.Plugins
             LoadAlertAreas();
         }
 
-		bool IsAlertArea(PlayerSession session, AlertArea area) {
-
-			float playerX = session.WorldPlayerEntity.transform.position.x;
-			float playerZ = session.WorldPlayerEntity.transform.position.z;
+		bool IsAlertArea(Vector3 position, AlertArea area) {
 
 			float minX = area.firstCornerX < area.secondCornerX ? area.firstCornerX : area.secondCornerX;
 			float maxX = area.secondCornerX > area.firstCornerX ? area.secondCornerX : area.firstCornerX;
@@ -107,33 +105,46 @@ namespace Oxide.Plugins
 			float minZ = area.firstCornerZ < area.secondCornerZ ? area.firstCornerZ : area.secondCornerZ;
 			float maxZ = area.secondCornerZ > area.firstCornerZ ? area.secondCornerZ : area.firstCornerZ;
 
-			if(minX <= playerX && playerX <= maxX
-			&& minZ <= playerZ && playerZ <= maxZ) {
+			if(minX <= position.x && position.x <= maxX
+			&& minZ <= position.z && position.z <= maxZ) {
 				return true;
 			}
 
 			return false;
 		}
+		
+		// For TradeZone plugin by SouZa.
+        bool isInsideArea(Vector3 position, string areaName)
+        {
+            foreach (AlertArea area in Areas) {
+                if (area.name.ToLower().Contains(areaName.ToLower())) {
+                    if (IsAlertArea(position, area)) {
+						return true;
+					}
+                }
+            }
+            return false;
+        }
 
 		void SendAreaAlerts(PlayerSession session)
 		{
 			//Puts("Checking area '" + area.name + "' for SteamId: ");
 			string steamId = session.SteamId.ToString();
 
-			if(!String.IsNullOrEmpty(steamId))
-			{
-				foreach(AlertArea area in Areas)
-				{
-					if(IsAlertArea(session, area))
-					{
-						if(area.constant || !area.IsReceived(steamId))
-						{
-							AlertManager.Instance.GenericTextNotificationServer(area.alertText, session.Player);
-							area.AddReceived(steamId);
-						}
+			if(!String.IsNullOrEmpty(steamId)) {
+				foreach(AlertArea area in Areas) {
+					
+					Vector3 playerPosition = new Vector3(
+							session.WorldPlayerEntity.transform.position.x, 
+							session.WorldPlayerEntity.transform.position.y, 
+							session.WorldPlayerEntity.transform.position.z
+						);
+					
+					if(IsAlertArea(playerPosition, area) && !string.IsNullOrEmpty(area.alertText) && (!area.IsReceived(steamId) || area.constant)) {
+						AlertManager.Instance.GenericTextNotificationServer(area.alertText, session.Player);
+						area.AddReceived(steamId);
 					}
-					else
-					{
+					else {
 						area.RemoveReceived(steamId);
 					}
 				}
@@ -163,12 +174,16 @@ namespace Oxide.Plugins
                 {"msg_wrongSyntaxEditName", "Wrong syntax! Use: <color=aqua>/alertareas name <NewAreaName></color>"},
                 {"msg_editNameSuccess", "Now area has the new name <color=green>{newName}</color>"},
                 {"msg_wrongSyntaxMain", "Wrong syntax! Use: <color=aqua>/alertareas help</color>"},
-                {"msg_help", "Available commands: \n<color=aqua>/alertareas list</color> - show all areas with alert. \n<color=aqua>/alertareas add <AreaName> [true]</color> - add new area (with optional \"true\" alert text will be shown constant). \n<color=aqua>/alertareas remove <AreaName></color> - remove area (case insensitive).\n<color=aqua>/alertareas edit <AreaName></color> - edit mode where you can set alert text, corners coordinates and 'constant' attribute."},
-                {"msg_helpEdit", "<color=aqua>/alertareas corner 1</color> - set first corner coordinates. \n<color=aqua>/alertareas corner 2</color> - set second corner coordinates. \n<color=aqua>/alertareas name <NewAreaName></color> - change area name. \n<color=aqua>/alertareas text <Some alert text!></color> - set area alert text. \n<color=aqua>/alertareas constant <true|false></color> - show alert constant or not."},
+				{"msg_help", "Available commands:"},
+				{"msg_helpList", "<color=aqua>/alertareas list</color> - show all areas with alert."},
+				{"msg_helpAdd", "<color=aqua>/alertareas add <AreaName> [true]</color> - add new area (with optional \"true\" alert text will be shown constant)."},
+				{"msg_helpRemove", "<color=aqua>/alertareas remove <AreaName></color> - remove area (case insensitive)."},
+				{"msg_helpEdit", "<color=aqua>/alertareas edit <AreaName></color> - edit mode where you can set alert text, corners coordinates and 'constant' attribute."},
 				{"msg_noAlertAreas", "No areas with alert."},
                 {"msg_areaListHeader", "Areas with alerts:"},
-                {"msg_areaListItem", "{i}. <color=green>{name}</color>: {alertText} \n<color=grey>({firstCornerCoords}|{secondCornerCoords}) {constant}</color>"},
-                {"msg_areaListItemConstant", "<color=red>(constant)</color>"},
+				{"msg_areaListItemTitle", "{i}. <color=green>{name}</color>: {alertText}"},
+				{"msg_areaListItemCoords", "<color=grey>({firstCornerCoords}|{secondCornerCoords}) {constant}</color>"},
+				{"msg_areaListItemConstant", "<color=red>(constant)</color>"},
                 {"msg_addWrongSyntax", "Wrong syntax! Use: <color=aqua>/alertareas add <AreaName> [true]</color>"},
 				{"msg_editWrongSyntax", "Wrong syntax! Use: <color=aqua>/alertareas edit <AreaName></color>"},
 				{"msg_removeWrongSyntax", "Wrong syntax! Use: <color=aqua>/alertareas remove <AreaName></color>"},
@@ -185,7 +200,12 @@ namespace Oxide.Plugins
                 {"msg_areaAdded", "Area <color=green>{name}</color> has been added."},
                 {"msg_areaRemoved", "Area <color=green>{name}</color> has been removed."},
                 {"msg_areaAlreadyExists", "Area <color=green>{name}</color> already exists (case insensitive)."},
-                {"msg_editMode", "Now you are editing area <color=green>{name}</color>:"},
+				{"msg_editMode", "Now you are editing area <color=green>{name}</color>"},
+				{"msg_helpEditCorner1", "<color=aqua>/alertareas corner 1</color> - set first corner coordinates."},
+				{"msg_helpEditCorner2", "<color=aqua>/alertareas corner 2</color> - set second corner coordinates."},
+				{"msg_helpEditName", "<color=aqua>/alertareas name <NewAreaName></color> - change area name."},
+                {"msg_helpEditText", "<color=aqua>/alertareas text <Some alert text!></color> - set area alert text."},
+				{"msg_helpEditConstant", "<color=aqua>/alertareas constant <true|false></color> - show alert constant or not."},
                 {"msg_notEditMode", "You are not in edit mode. Use: <color=aqua>/alertareas edit <AreaName></color> first."},
             }, this);
         }
@@ -211,6 +231,10 @@ namespace Oxide.Plugins
 			{
 				case "help":
 					hurt.SendChatMessage(session, msgPrefix, GetMsg("msg_help", session));
+					hurt.SendChatMessage(session, GetMsg("msg_helpList", session));
+					hurt.SendChatMessage(session, GetMsg("msg_helpAdd", session));
+					hurt.SendChatMessage(session, GetMsg("msg_helpRemove", session));
+					hurt.SendChatMessage(session, GetMsg("msg_helpEdit", session));
 					return;
 					
 				case "list":
@@ -225,13 +249,18 @@ namespace Oxide.Plugins
 					foreach (var area in Areas)
 					{
 						rowNum++;
-						hurt.SendChatMessage(session, GetMsg("msg_areaListItem", session)
+						
+						hurt.SendChatMessage(session, GetMsg("msg_areaListItemTitle", session)
 							.Replace("{i}", rowNum.ToString())
-							.Replace("{firstCornerCoords}", area.firstCornerX +","+ area.firstCornerZ)
-							.Replace("{secondCornerCoords}", area.secondCornerX +","+ area.secondCornerZ)
 							.Replace("{name}", area.name)
 							.Replace("{alertText}", area.alertText)
-							.Replace("{constant}", area.constant ? GetMsg("msg_areaListItemConstant", session) : ""));
+						);
+						
+						hurt.SendChatMessage(session, GetMsg("msg_areaListItemCoords", session)
+							.Replace("{firstCornerCoords}", area.firstCornerX +","+ area.firstCornerZ)
+							.Replace("{secondCornerCoords}", area.secondCornerX +","+ area.secondCornerZ)
+							.Replace("{constant}", area.constant ? GetMsg("msg_areaListItemConstant", session) : "")
+						);
 					}
 
 					break;
@@ -289,7 +318,11 @@ namespace Oxide.Plugins
 							hurt.SendChatMessage(session, msgPrefix, GetMsg("msg_editMode", session)
 								.Replace("{name}", Areas[areaIndex].name));
 
-							hurt.SendChatMessage(session, GetMsg("msg_helpEdit", session));
+							hurt.SendChatMessage(session, GetMsg("msg_helpEditCorner1", session));
+							hurt.SendChatMessage(session, GetMsg("msg_helpEditCorner2", session));
+							hurt.SendChatMessage(session, GetMsg("msg_helpEditName", session));
+							hurt.SendChatMessage(session, GetMsg("msg_helpEditText", session));
+							hurt.SendChatMessage(session, GetMsg("msg_helpEditConstant", session));
 
 							editAreaName = areaName;
 
