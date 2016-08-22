@@ -3,7 +3,7 @@ Plugin for Hurtworld, allow admins to create rectangle areas (by coordinates of 
 Available commands
 -------------------
 
-**/alertareas help** - show available command.  
+**/alertareas help** - show available commands.  
 **/alertareas list** - show all areas with alert.  
 **/alertareas add \<AreaName\> [true]** - add new area (with optional "true" alert text will be shown constantly).  
 **/alertareas remove \<AreaName\>** - remove area (case insensitive).  
