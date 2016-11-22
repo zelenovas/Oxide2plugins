@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("AlertAreas", "ALEX_and_ER", "0.1.0")]
+    [Info("AlertAreas", "ALEX_and_ER", "0.1.1", ResourceId = 1749)]
     class AlertAreas : HurtworldPlugin
     {
 		static string msgPrefixColor = "orange";
